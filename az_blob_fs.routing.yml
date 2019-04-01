@@ -1,0 +1,26 @@
+
+az_blob_fs.files.azblob:
+  path: '/azblob/files/{filepath}'
+  defaults:
+    _controller: '\Drupal\system\FileDownloadController::download'
+    scheme: azblob
+  requirements:
+    _access: 'TRUE'
+az_blob_fs.sandbox_controller_sandbox:
+  path: '/az_blob_fs/sandbox'
+  defaults:
+    _controller: '\Drupal\az_blob_fs\Controller\SandboxController::sandbox'
+    _title: 'sandbox'
+  requirements:
+    _permission: 'access content'
+
+az_blob_fs.settings_form:
+  path: '/admin/config/media/az_blob_fs'
+  defaults:
+    _form: '\Drupal\az_blob_fs\Form\SettingsForm'
+    _title: 'SettingsForm'
+  requirements:
+    _permission: 'access administration pages'
+  options:
+    _admin_route: TRUE
+
