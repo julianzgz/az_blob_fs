@@ -22,7 +22,7 @@ class AzBlobService {
   protected $configFactory;
 
   /**
-   * Constructs an S3fsService object.
+   * Constructs an AzBlobService object.
    *
    * @param \Drupal\Core\Database\Connection $connection
    *   The new database connection object.
@@ -35,7 +35,7 @@ class AzBlobService {
   }
 
   public function getAzBlobProxyClient(array $config) {
-    $connectionString = "DefaultEndpointsProtocol=https;AccountName={$config['AccountName']};AccountKey={$config['AccountKey']}";
+    $connectionString = "DefaultEndpointsProtocol=https;AccountName={$config['az_blob_account_name']};AccountKey={$config['az_blob_account_key']}";
     return BlobRestProxyAlter::createBlobService($connectionString);
   }
 }
