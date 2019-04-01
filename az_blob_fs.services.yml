@@ -8,3 +8,7 @@ services:
       - [setStringTranslation, ['@string_translation']]
     tags:
       - { name: stream_wrapper, scheme: azblob }
+  path_processor.azblob:
+    class: Drupal\az_blob_fs\PathProcessor\PathProcessorAzBlob
+    tags:
+      - { name: path_processor_inbound, priority: 200 }

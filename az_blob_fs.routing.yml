@@ -5,7 +5,9 @@ az_blob_fs.files.azblob:
     _controller: '\Drupal\system\FileDownloadController::download'
     scheme: azblob
   requirements:
+    filepath: .+
     _access: 'TRUE'
+
 az_blob_fs.sandbox_controller_sandbox:
   path: '/az_blob_fs/sandbox'
   defaults:
@@ -18,9 +20,8 @@ az_blob_fs.settings_form:
   path: '/admin/config/media/az_blob_fs'
   defaults:
     _form: '\Drupal\az_blob_fs\Form\SettingsForm'
-    _title: 'SettingsForm'
+    _title: 'Azure BLob File System Settings Form'
   requirements:
     _permission: 'access administration pages'
   options:
     _admin_route: TRUE
-
