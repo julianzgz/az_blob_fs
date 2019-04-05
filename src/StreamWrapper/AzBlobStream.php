@@ -13,6 +13,7 @@ use MicrosoftAzure\Storage\Blob\Models\BlockList;
 use MicrosoftAzure\Storage\Blob\Models\ListBlobsOptions;
 use MicrosoftAzure\Storage\Common\Exceptions\ServiceException;
 use Psr\Http\Message\StreamInterface;
+use Drupal\Component\Utility\UrlHelper;
 
 
 /**
@@ -114,122 +115,151 @@ class AzBlobStream implements StreamWrapperInterface, StreamInterface {
     $this->client = $this->getClient();
   }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getClient() {
-        return $this->azBlob->getAzBlobProxyClient($this->config);
-    }
+  /**
+   * {@inheritdoc}
+   */
+  public function getClient() {
+    return $this->azBlob->getAzBlobProxyClient($this->config);
+  }
 
-    /**
-     * Returns the type of stream wrapper.
-     *
-     * @return int
-     */
-    public static function getType() {
-        return StreamWrapperInterface::NORMAL;
-    }
+  /**
+   * Returns the type of stream wrapper.
+   *
+   * @return int
+   */
+  public static function getType() {
+    return StreamWrapperInterface::NORMAL;
+  }
 
-    /**
-     * Returns the name of the stream wrapper for use in the UI.
-     *
-     * @return string
-     *   The stream wrapper name.
-     */
-    public function getName() {
-        return $this->t('Azure Storage Blob File System');
-    }
+  /**
+   * Returns the name of the stream wrapper for use in the UI.
+   *
+   * @return string
+   *   The stream wrapper name.
+   */
+  public function getName() {
+    return $this->t('Azure Storage Blob File System');
+  }
 
-    /**
-     * Returns the description of the stream wrapper for use in the UI.
-     *
-     * @return string
-     *   The stream wrapper description.
-     */
-    public function getDescription() {
-        return $this->t('Azure Storage Blob File System');
-    }
+  /**
+   * Returns the description of the stream wrapper for use in the UI.
+   *
+   * @return string
+   *   The stream wrapper description.
+   */
+  public function getDescription() {
+    return $this->t('Azure Storage Blob File System');
+  }
 
-    /**
-     * Gets the path that the wrapper is responsible for.
-     *
-     * This function isn't part of DrupalStreamWrapperInterface, but the rest
-     * of Drupal calls it as if it were, so we need to define it.
-     *
-     * @return string
-     *   The empty string. Since this is a remote stream wrapper,
-     *   it has no directory path.
-     *
-     * @see \Drupal\Core\File\LocalStream::getDirectoryPath()
-     */
-    public function getDirectoryPath() {
+  /**
+   * Gets the path that the wrapper is responsible for.
+   *
+   * This function isn't part of DrupalStreamWrapperInterface, but the rest
+   * of Drupal calls it as if it were, so we need to define it.
+   *
+   * @return string
+   *   The empty string. Since this is a remote stream wrapper,
+   *   it has no directory path.
+   *
+   * @see \Drupal\Core\File\LocalStream::getDirectoryPath()
+   */
+  public function getDirectoryPath() {
+    return '';
+  }
+
+  /**
+   * Sets the absolute stream resource URI.
+   *
+   * This allows you to set the URI. Generally is only called by the factory
+   * method.
+   *
+   * @param string $uri
+   *   A string containing the URI that should be used for this instance.
+   */
+  public function setUri($uri) {
+    $this->uri = $uri;
+  }
+
+  /**
+   * Returns the stream resource URI.
+   *
+   * @return string
+   *   Returns the current URI of the instance.
+   */
+  public function getUri() {
+    return $this->uri;
+  }
+
+  /**
+   * Returns a web accessible URL for the resource.
+   *
+   * This function should return a URL that can be embedded in a web page
+   * and accessed from a browser. For example, the external URL of
+   * "youtube://xIpLd0WQKCY" might be
+   * "http://www.youtube.com/watch?v=xIpLd0WQKCY".
+   *
+   * @return string
+   *   Returns a string containing a web accessible URL for the resource.
+   */
+  public function getExternalUrl() {
+    // Get the target destination without the scheme.
+    $target = file_uri_target($this->uri);
+
+    // If there is no target we won't return path to the bucket,
+    // instead we'll return empty string.
+    if (empty($target)) {
         return '';
     }
 
-    /**
-     * Sets the absolute stream resource URI.
-     *
-     * This allows you to set the URI. Generally is only called by the factory
-     * method.
-     *
-     * @param string $uri
-     *   A string containing the URI that should be used for this instance.
-     */
-    public function setUri($uri) {
-        $this->uri = $uri;
+    return $this->client->_getBlobUrl($this->container, $target);
+  }
+
+  /**
+   * Returns canonical, absolute path of the resource.
+   *
+   * Implementation placeholder. PHP's realpath() does not support stream
+   * wrappers. We provide this as a default so that individual wrappers may
+   * implement their own solutions.
+   *
+   * * This wrapper does not support realpath().
+   *
+   * @return bool
+   *   Always returns FALSE.
+   */
+  public function realpath() {
+    return FALSE;
+  }
+
+  /**
+   * Extract container name
+   *
+   * @param string $path
+   * @return string
+   */
+  protected function getContainerName($path) {
+    $url = parse_url($path);
+    if ($url['host']) {
+      return $url['host'];
     }
-
-    /**
-     * Returns the stream resource URI.
-     *
-     * @return string
-     *   Returns the current URI of the instance.
-     */
-    public function getUri() {
-        return $this->uri;
+    return '';
+  }
+  /**
+   * Extract file name
+   *
+   * @param string $path
+   * @return string
+   */
+  protected function getFileName($path) {
+    $url = parse_url($path);
+    if ($url['host']) {
+      $fileName = isset($url['path']) ? $url['path'] : $url['host'];
+      if (strpos($fileName, '/') === 0) {
+        $fileName = substr($fileName, 1);
+      }
+      return $fileName;
     }
-
-    /**
-     * Returns a web accessible URL for the resource.
-     *
-     * This function should return a URL that can be embedded in a web page
-     * and accessed from a browser. For example, the external URL of
-     * "youtube://xIpLd0WQKCY" might be
-     * "http://www.youtube.com/watch?v=xIpLd0WQKCY".
-     *
-     * @return string
-     *   Returns a string containing a web accessible URL for the resource.
-     */
-    public function getExternalUrl() {
-        // Get the target destination without the scheme.
-        $target = file_uri_target($this->uri);
-
-        // If there is no target we won't return path to the bucket,
-        // instead we'll return empty string.
-        if (empty($target)) {
-            return '';
-        }
-
-        $url = $this->client->_getBlobUrl($this->container, $target);
-
-        return $url;
-    }
-
-    /**
-     * Returns canonical, absolute path of the resource.
-     *
-     * Implementation placeholder. PHP's realpath() does not support stream
-     * wrappers. We provide this as a default so that individual wrappers may
-     * implement their own solutions.
-     *
-     * * This wrapper does not support realpath().
-     *
-     * @return bool
-     *   Always returns FALSE.
-     */
-    public function realpath() {
-        return FALSE;
-    }
+    return '';
+  }
 
   /**
    * Close the directory listing handles
@@ -335,6 +365,8 @@ class AzBlobStream implements StreamWrapperInterface, StreamInterface {
   }
 
   /**
+   * Azure Blob Storage doesn't support physical directories so always return TRUE
+   *
    * @return bool
    */
   public function mkdir($path, $mode, $options) {
@@ -403,9 +435,8 @@ class AzBlobStream implements StreamWrapperInterface, StreamInterface {
    */
   public function stream_flush() {
     if ($this->mode == 'r') {
-      return false;
+      return FALSE;
     }
-
 
     if ($this->isSeekable()) {
       $this->seek(0);
@@ -426,8 +457,8 @@ class AzBlobStream implements StreamWrapperInterface, StreamInterface {
 
       return TRUE;
     } catch (Exception $exception) {
-        watchdog_exception('Azure Blob File System', $exception);
-        return FALSE;
+      watchdog_exception('Azure Blob File System 1', $exception);
+      return FALSE;
     }
   }
 
@@ -509,16 +540,20 @@ class AzBlobStream implements StreamWrapperInterface, StreamInterface {
   public function stream_open($uri, $mode, $options, &$opened_path) {
     $this->setUri($uri);
     $this->stream = new Stream(fopen('php://temp', $mode));
-    $parts = explode('://', $uri);
+    // Get the target destination without the scheme.
+    $target = file_uri_target($this->uri);
+    //$parts = explode('://', $uri);
 
     try {
-      $this->client->getBlob($this->container, $parts[1]);
+      $this->client->getBlob($this->container, $target);
     } catch (ServiceException $exception) {
       //return FALSE;
     }
 
     if ($mode == 'rb') {
-      $this->temporaryFileHandle = $this->client->getBlob($this->container, $parts[1])->getContentStream();
+      $this->temporaryFileHandle = $this
+        ->client->getBlob($this->container, $target)
+        ->getContentStream();
     }
 
     return TRUE;
@@ -642,7 +677,16 @@ class AzBlobStream implements StreamWrapperInterface, StreamInterface {
    * @see http://php.net/manual/en/streamwrapper.unlink.php
    */
   public function unlink($uri) {
-    return $this->client->deleteBlob($this->container, $uri);
+    // Get the target destination without the scheme.
+    $target = file_uri_target($uri);
+    try {
+      $del = $this->client->deleteBlob($this->container, $target);
+    }
+    catch (ServiceException $e) {
+      $del = false;
+    }
+
+    return $del;
   }
 
   /**
@@ -650,8 +694,9 @@ class AzBlobStream implements StreamWrapperInterface, StreamInterface {
    */
   public function url_stat($uri, $flags) {
     // Use static cache to prevent multiple requests to backend.
-    static $cache = [];
-    if (!isset($cache[$uri])) {
+    //$cache = &drupal_static(__FUNCTION__);
+    //static $cache = [];
+    //if (!isset($cache[$uri])) {
       // @see http://be2.php.net/manual/en/function.stat.php
       $stat = array_fill_keys([
         'dev',
@@ -672,38 +717,78 @@ class AzBlobStream implements StreamWrapperInterface, StreamInterface {
       // If $blob_prefixes is not empty and $blobs is, it means it's a directory
       // If $blobs is not empty and $blob_prefixes is, it's a file
       // If both are empty, the blob does not exist
-      $blob = $this->client->getPrefixedBlob($this->container, $uri);
-      $blob_prefixes = $blob->getBlobPrefixes();
-      $blobs = $blob->getBlobs();
+      //$blob_list = $this->client->getPrefixedBlob($this->container, $uri);
+    // Get the target destination without the scheme.
+    $target = file_uri_target($uri);
+      $blob = $this->client->getPrefixedBlob($this->container, $target);
+
+      $blob_prefixes = [];
+      $pathArray = explode("/", $target);
+      $count=0;
+      foreach ($pathArray as $key => $slice) {
+        $pos = strpos($slice, '.');
+        $count++;
+        if ($pos !== false) {
+          $blob_prefixes[] = $slice;
+        }
+      }
+
+/*      try {
+        $result = $this->client->getBlobMetadata($this->container, $parts[1]);
+        $retMetadata = $result->getMetadata();
+        foreach ($retMetadata as $key => $value) {
+          $metadata[$key] = $value;
+        }
+      }
+      catch (ServiceException $e) {
+        watchdog_exception('Azure Blob File System', $e);
+      }*/
+
+      //}
+
+      //$blob_prefixes = [];
+      //$blob_prefixes = $blob->getBlobPrefixes();
+      //$blobs = $blob_list->getBlobs();
 
       // Blob exists
-      if (!empty($blobs) || !empty($blob_prefixes)) {
+      //if (!empty($blob) && $t!='') {
         // Blob is a file
-        if (empty($blob_prefixes) && !empty($blobs)) {
-          $blob = reset($blobs);
+        if (!empty($blob) && !empty($blob_prefixes)) {
+          //$blob = reset($blobs);
           $blob_properties = $blob->getProperties();
-          // Use the S_IFDIR posix flag for directories, S_IFREG for files.
+          // Use the S_IFREG posix flag for files.
           // All files are considered writable, so OR in 0777.
           $stat['mode'] = 0100000 | 0777;
           $stat['size'] = $blob_properties->getContentLength();
           $stat['mtime'] = date_timestamp_get($blob_properties->getLastModified());
           $stat['blksize'] = -1;
           $stat['blocks'] = -1;
-        }
-        // Blob is directory
-        else if (!empty($blob_prefixes) && empty($blobs)) {
-          $stat['mode'] = 0040000 | 0777;
+          $cache[$uri] = $stat;
         }
 
-        $cache[$uri] = $stat;
-      }
+
+        if (empty($blob)) {
+          // Blob is directory
+          if (empty($blob_prefixes)) {
+            // Use the S_IFDIR posix flag for directories
+            // All directories are considered writable, so OR in 0777.
+            $stat['mode'] = 0040000 | 0777;
+            $cache[$uri] = $stat;
+          }
+          else {
+            $cache[$uri] = FALSE;
+          }
+        }
+
+
+     /* }
       else {
         // Blob doesn't exit
         $cache[$uri] = FALSE;
-      }
-      return $cache[$uri];
+      }*/
 
-    }
+      return $cache[$uri];
+    //}
   }
 
   /**
@@ -725,8 +810,10 @@ class AzBlobStream implements StreamWrapperInterface, StreamInterface {
     if (!isset($uri)) {
       $uri = $this->uri;
     }
-    $scheme = \Drupal::service('file_system')->uriScheme($uri);
-    $dirname = \Drupal::service('file_system')->dirname((file_uri_target($uri)));
+
+    $fs = \Drupal::service('file_system');
+    $scheme = $fs->uriScheme($uri);
+    $dirname = $fs->dirname((file_uri_target($uri)));
 
     // When the dirname() call above is given '$scheme://', it returns '.'.
     // But '$scheme://.' is an invalid uri, so we return "$scheme://" instead.

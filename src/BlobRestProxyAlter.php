@@ -79,7 +79,7 @@ class BlobRestProxyAlter extends BlobRestProxy {
       $this->copyBlob($destination_container, $destination_name, $source_container, $source_name);
       $this->deleteBlob($source_container, $source_name);
     } catch (ServiceException $e) {
-      watchdog_exception('Azure Blog File System', $e);
+      watchdog_exception('Azure Blob File System', $e);
       return FALSE;
     }
     return TRUE;
@@ -105,19 +105,13 @@ class BlobRestProxyAlter extends BlobRestProxy {
   }
 
   public function getPrefixedBlob($container, $uri) {
-    $prefix = $uri;
-    if ($uri === '/' || $uri === '') {
-      $prefix = '';
+    try {
+      return $this->getBlob($container, $uri);
     }
-    else {
-      // Remove trailing slashes
-      $prefix = rtrim($uri, '/');
+    catch (ServiceException $e) {
+      watchdog_exception('Azure Blob File System 2', $e);
+      return FALSE;
     }
-
-    $options = new ListBlobsOptions();
-    $options->setPrefix($prefix);
-    $options->setDelimiter('/');
-    return $this->listBlobs($container, $options);
   }
 
   public static function createBlobService(
