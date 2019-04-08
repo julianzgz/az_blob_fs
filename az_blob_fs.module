@@ -48,7 +48,7 @@ function az_blob_fs_preprocess_image_style(&$variables) {
     if ($pos !== false) {
       $converted_image_uri = $path_info['dirname'] . DIRECTORY_SEPARATOR . $path_info['filename'];
       if (!file_exists($converted_image_uri)) {
-        \Drupal::logger('az_blob_fs')->notice('Source image at %source_image_path not found while trying to generate derivative image at %derivative_path.',
+        \Drupal::logger('az_blob_fs')->notice(t('Source image at %source_image_path not found while trying to generate derivative image at %derivative_path.'),
           ['%source_image_path' => $image_uri, '%derivative_path' => $derivative_uri]
         );
         return new Response(t('Error generating image, missing source file.'), 404);
@@ -71,10 +71,9 @@ function az_blob_fs_preprocess_image_style(&$variables) {
     $lock = \Drupal::lock();
     $lock_acquired = $lock->acquire($lock_name);
     if (!$lock_acquired) {
-      // Tell client to retry again in 3 seconds. Currently no browsers are
-      // known to support Retry-After.
-      //TODO: this exception breaks the page, replace by other behavior
-      throw new ServiceUnavailableHttpException(3, t('Image generation in progress. Try again shortly.'));
+      // Pause the process 3 seconds.
+      $lock->wait($lock_name, 3);
+      \Drupal::logger('az_blob_fs')->notice(t('Image generation in progress, paused for 3 seconds.'));
     }
   }
 
