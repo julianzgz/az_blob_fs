@@ -39,12 +39,13 @@ class BlobRestProxyAlter extends BlobRestProxy {
 
   private function _createPath($container, $blob = '') {
     if (empty($blob)) {
-      if (!empty($container)) {
-        return $container;
+      if (empty($container)) {
+        $separator = '/';
       }
       else {
-        return '/' . $container;
+        $separator = '';
       }
+      return $separator . $container;
     }
     else {
       $encodedBlob = urlencode($blob);
@@ -56,11 +57,12 @@ class BlobRestProxyAlter extends BlobRestProxy {
       $encodedBlob = str_replace('+', '%20', $encodedBlob);
       // Empty container means accessing default container
       if (empty($container)) {
-        return $encodedBlob;
+        $separator = '';
       }
       else {
-        return '/' . $container . '/' . $encodedBlob;
+        $separator = '/';
       }
+      return $separator . $container . $separator . $encodedBlob;
     }
   }
 
@@ -109,7 +111,6 @@ class BlobRestProxyAlter extends BlobRestProxy {
       return $this->getBlob($container, $uri);
     }
     catch (ServiceException $e) {
-      watchdog_exception('Azure Blob File System 2', $e);
       return FALSE;
     }
   }
