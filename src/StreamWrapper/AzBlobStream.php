@@ -355,10 +355,9 @@ class AzBlobStream implements StreamWrapperInterface, StreamInterface {
     }
     try {
       $this->iterator->rewind();
-
       return TRUE;
-    } catch (\Exception $e) {
-
+    }
+    catch (ServiceException $e) {
       watchdog_exception('Azure Blob File System', $e);
       return FALSE;
     }
@@ -456,8 +455,9 @@ class AzBlobStream implements StreamWrapperInterface, StreamInterface {
       $this->iterator = FALSE;
 
       return TRUE;
-    } catch (Exception $exception) {
-      watchdog_exception('Azure Blob File System 1', $exception);
+    }
+    catch (ServiceException $e) {
+      watchdog_exception('Azure Blob File System 1', $e);
       return FALSE;
     }
   }
@@ -542,11 +542,11 @@ class AzBlobStream implements StreamWrapperInterface, StreamInterface {
     $this->stream = new Stream(fopen('php://temp', $mode));
     // Get the target destination without the scheme.
     $target = file_uri_target($this->uri);
-    //$parts = explode('://', $uri);
 
     try {
       $this->client->getBlob($this->container, $target);
-    } catch (ServiceException $exception) {
+    }
+    catch (ServiceException $e) {
       //return FALSE;
     }
 
